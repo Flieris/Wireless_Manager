@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Wireless Manager</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank </string>
+    <string name="wifi_text_ph">Wi-fi placeholder</string>
+    <string name="telephony_text_ph">Telephony Placeholder</string>
+</resources>
