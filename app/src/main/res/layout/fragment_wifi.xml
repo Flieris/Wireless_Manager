@@ -1,3 +1,7 @@
+<!--
+  ~ Copyright (c) Sebastian Lenkiewicz 2017.
+  -->
+
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -11,6 +15,6 @@
         android:textSize="40sp"
         android:textStyle="bold"
         android:text="@string/wifi_text_ph"
-        android:textAlignment="center"/>
+        android:layout_centerInParent="true"/>
 
 </RelativeLayout>
