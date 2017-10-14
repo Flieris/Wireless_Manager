@@ -8,14 +8,24 @@
     android:layout_height="match_parent"
     tools:context="com.example.sebastian.wirelessmanager.TelephonyFragment">
 
-    <!-- TODO: Update blank fragment layout -->
+
     <TextView
         android:id="@+id/telephony_tv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="15sp"
         android:textStyle="bold"
+        android:layout_alignParentTop="true"
         android:layout_centerInParent="true"
         android:text="@string/telephony_text_ph" />
+    <TextView
+        android:id="@+id/cell_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:layout_centerInParent="true"
+        android:layout_alignParentBottom="true"
+        android:text="@string/cell_text_ph" />
 
 </RelativeLayout>

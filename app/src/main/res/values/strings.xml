@@ -1,3 +1,7 @@
+<!--
+  ~ Copyright (c) Sebastian Lenkiewicz 2017.
+  -->
+
 <resources>
     <string name="app_name">Wireless Manager</string>
 
@@ -5,4 +9,5 @@
     <string name="hello_blank_fragment">Hello blank </string>
     <string name="wifi_text_ph">Wi-fi placeholder</string>
     <string name="telephony_text_ph">Telephony Placeholder</string>
+    <string name="cell_text_ph">Cell Placeholder</string>
 </resources>
