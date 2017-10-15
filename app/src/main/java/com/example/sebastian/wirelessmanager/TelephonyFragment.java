@@ -18,6 +18,7 @@ import android.telephony.CellInfoGsm;
 import android.telephony.CellInfoLte;
 import android.telephony.CellInfoWcdma;
 import android.telephony.CellLocation;
+import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.telephony.cdma.CdmaCellLocation;
 import android.telephony.gsm.GsmCellLocation;
@@ -52,65 +53,17 @@ public class TelephonyFragment extends Fragment {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_telephony, container, false);
         mcontext = super.getContext();
-        textView=(TextView)view.findViewById(R.id.telephony_tv);
+        textView=(TextView)view.findViewById(R.id.system_info);
         cellView=(TextView)view.findViewById(R.id.cell_tv);
         mcontext = super.getContext();
-        System.out.println(R.id.telephony_tv);
+        //System.out.println(R.id.telephony_tv);
         tm = (TelephonyManager)mcontext.getSystemService(Context.TELEPHONY_SERVICE);
         String IMEINumber=tm.getDeviceId();
         String subscriberID=tm.getDeviceId();
         String SIMSerialNumber=tm.getSimSerialNumber();
-        String networkCountryISO=tm.getNetworkCountryIso();
-        String SIMCountryISO=tm.getSimCountryIso();
-        String softwareVersion=tm.getDeviceSoftwareVersion();
-        String voiceMailNumber=tm.getVoiceMailNumber();
         String strphoneType="";
-        List<CellInfo> cellInfoList = tm.getAllCellInfo();
         int phoneType=tm.getPhoneType();
-        String cell_info = "Cell Information:\n";
-        for (CellInfo cellInfos : cellInfoList){
-            if (cellInfos instanceof CellInfoGsm){
-                CellInfoGsm cellInfoGsm = (CellInfoGsm)cellInfos;
-                CellIdentityGsm cellIdentityGsm = cellInfoGsm.getCellIdentity();
-                cell_info += "Cell Id: " + cellIdentityGsm.getCid() + "\n"
-                        + "Mobile Country Code: " + cellIdentityGsm.getMcc() + "\n"
-                        + "Mobile Network Code: " + cellIdentityGsm.getMnc() + "\n"
-                        + "Local Area Code: " + cellIdentityGsm.getLac() + "\n"
-                        + "Signal Str: " + cellInfoGsm.getCellSignalStrength().getDbm() + " [dBm]\n";
-                break;
-            }
-            if (cellInfos instanceof CellInfoCdma){
-                CellInfoCdma cellInfoCdma = (CellInfoCdma) cellInfos;
-                CellIdentityCdma cellIdentityCdma = cellInfoCdma.getCellIdentity();
-                cell_info += "BS Id: " + cellIdentityCdma.getBasestationId() + "\n"
-                        + "Network Id: " + cellIdentityCdma.getNetworkId() + "\n"
-                        + "System Id: " + cellIdentityCdma.getSystemId() + "\n"
-                        + "Latitude: " + cellIdentityCdma.getLatitude()
-                        + " Longitude" + cellIdentityCdma.getLongitude() + "\n";
-                break;
-            }
-            if (cellInfos instanceof CellInfoLte){
-                CellInfoLte cellInfoLte = (CellInfoLte)cellInfos;
-                CellIdentityLte cellIdentityLte = cellInfoLte.getCellIdentity();
-                cell_info += "Cell Id: " + cellIdentityLte.getCi() + "\n"
-                        + "Mobile Country Code: " + cellIdentityLte.getMcc() + "\n"
-                        + "Mobile Network Code: " + cellIdentityLte.getMnc() + "\n"
-                        + "Local Area Code: " + cellIdentityLte.getPci() + "\n"
-                        + "Tracking Area Code: " + cellIdentityLte.getTac() + "\n";
-                break;
-            }
-            if (cellInfos instanceof CellInfoWcdma){
-                CellInfoWcdma cellInfoWcdma = (CellInfoWcdma)cellInfos;
-                CellIdentityWcdma cellIdentityWcdma = cellInfoWcdma.getCellIdentity();
-                cell_info += "Cell Id:" + cellIdentityWcdma.getCid() + "\n"
-                        + "Mobile Country Code: " + cellIdentityWcdma.getMcc() + "\n"
-                        + "Mobile Network Code: " + cellIdentityWcdma.getMnc() + "\n"
-                        + "Local Area Code: " + cellIdentityWcdma.getLac() + "\n"
-                        + "Signal Str: " + cellInfoWcdma.getCellSignalStrength().getDbm() + " [dBm]\n";
-                break;
-            }
-        }
-        cellView.setText(cell_info);
+
         switch (phoneType)
         {
             case (TelephonyManager.PHONE_TYPE_CDMA):
@@ -124,17 +77,21 @@ public class TelephonyFragment extends Fragment {
                 break;
         }
         boolean isRoaming=tm.isNetworkRoaming();
-        String info="Phone Details:\n";
+        String info="";
         info+="\n IMEI Number:"+IMEINumber;
         info+="\n SubscriberID:"+subscriberID;
         info+="\n Sim Serial Number:"+SIMSerialNumber;
-        info+="\n Network Country ISO:"+networkCountryISO;
-        info+="\n SIM Country ISO:"+SIMCountryISO;
-        info+="\n Software Version:"+softwareVersion;
-        info+="\n Voice Mail Number:"+voiceMailNumber;
         info+="\n Phone Network Type:"+strphoneType;
-        info+="\n In Roaming? :"+isRoaming;
         textView.setText(info);
+        tm.listen(new MyPhoneStateListener(mcontext,view), PhoneStateListener.LISTEN_CALL_STATE
+                | PhoneStateListener.LISTEN_CELL_INFO // Requires API 17
+                | PhoneStateListener.LISTEN_CELL_LOCATION
+                | PhoneStateListener.LISTEN_DATA_ACTIVITY
+                | PhoneStateListener.LISTEN_DATA_CONNECTION_STATE
+                | PhoneStateListener.LISTEN_SERVICE_STATE
+                | PhoneStateListener.LISTEN_SIGNAL_STRENGTHS
+                | PhoneStateListener.LISTEN_CALL_FORWARDING_INDICATOR
+                | PhoneStateListener.LISTEN_MESSAGE_WAITING_INDICATOR);
         return view;
     }
 

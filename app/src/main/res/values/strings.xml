@@ -10,4 +10,9 @@
     <string name="wifi_text_ph">Wi-fi placeholder</string>
     <string name="telephony_text_ph">Telephony Placeholder</string>
     <string name="cell_text_ph">Cell Placeholder</string>
+    <string name="signal_strength_ph">Signal Strength Placeholder</string>
+    <string name="placeholder">Placeholder</string>
+    <string name="system_title">Phone Details:</string>
+    <string name="cell_title">Cell Information:</string>
+    <string name="signal_title">Signal Strength:</string>
 </resources>
