@@ -15,4 +15,27 @@
     <string name="system_title">Phone Details:</string>
     <string name="cell_title">Cell Information:</string>
     <string name="signal_title">Signal Strength:</string>
+    <string name="ph_wifi_state">placeholder state</string>
+    <string name="wifi_on">Wi-Fi: ON</string>
+    <string name="wifi_off">Wi-Fi: OFF</string>
+    <string name="wifi_switch_on">On</string>
+    <string name="wifi_switch_off">Off</string>
+    <string name="wifi_enabling">Wi-Fi: Enabling</string>
+    <string name="wifi_disabling">Wi-Fi: Disabling</string>
+    <string name="wifi_basic_title">Wi-Fi details:</string>
+    <string name="drawer_open">Drawer Open</string>
+    <string name="drawer_close">Drawer Close</string>
+    <string name="wifi_title">Wi-Fi</string>
+    <string name="telephony_title">Telephony</string>
+    <string name="firebase_title">Firebase</string>
+    <string name="status">Firebase: Not Connected</string>
+    <string name="firebase_login">Login</string>
+    <string name="firebase_register">Register</string>
+    <string name="password">Password</string>
+    <string name="email_hint">E-mail address</string>
+    <string name="log_in">Log in</string>
+    <string name="forgot_password">Forgot password</string>
+    <string name="create_account">Create account</string>
+    <string name="firebase_connected">Firebase: Connected</string>
+    <string name="firebase_disconnected">Firebase: disconnected</string>
 </resources>

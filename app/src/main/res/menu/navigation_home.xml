@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Copyright (c) Sebastian Lenkiewicz 2017.
+  -->
+
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:title="@string/firebase_title">
+        <menu>
+            <item
+                android:id="@+id/firebase_login"
+                android:title="@string/firebase_login"/>
+            <item
+                android:id="@+id/firebase_register"
+                android:title="@string/firebase_register"/>
+        </menu>
+    </item>
+    <item android:title="@string/wifi_title">
+        <menu>
+            <item
+                android:id="@+id/wifi_test1"
+                android:title="@string/placeholder"/>
+            <item
+                android:id="@+id/wifi_test2"
+                android:title="@string/placeholder"/>
+        </menu>
+    </item>
+    <item android:title="@string/telephony_title">
+        <menu>
+            <item
+                android:id="@+id/telephony_test1"
+                android:title="@string/placeholder"/>
+            <item
+                android:id="@+id/telephony_test2"
+                android:title="@string/placeholder"/>
+        </menu>
+    </item>
+</menu>
