@@ -84,7 +84,7 @@ class MyPhoneStateListener extends PhoneStateListener implements LocationListene
         if (fineLocationPermissionCheck == PackageManager.PERMISSION_GRANTED &&
                 coarseLocationPermissionCheck == PackageManager.PERMISSION_GRANTED &&
                 telephonyPermissionCheck == PackageManager.PERMISSION_GRANTED) {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 30000, 10, this);
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 40000, 10, this);
             telephonyManager.listen(this, PhoneStateListener.LISTEN_CALL_STATE
                     | PhoneStateListener.LISTEN_CELL_INFO // Requires API 17
                     | PhoneStateListener.LISTEN_CELL_LOCATION

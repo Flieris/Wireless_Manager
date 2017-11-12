@@ -1,0 +1,27 @@
+<!--
+  ~ Copyright (c) Sebastian Lenkiewicz 2017.
+  -->
+
+<resources>
+    <!--
+
+    To get one, follow this link, follow the directions and press "Create" at the end:
+
+    https://console.developers.google.com/flows/enableapi?apiid=maps_android_backend&keyType=CLIENT_SIDE_ANDROID&r=F3:21:C4:88:B3:94:F4:67:78:1E:39:2A:4D:2A:72:29:9A:EB:EA:13%3Bcom.example.sebastian.wirelessmanager.telephony.heatmap
+
+    You can also add your credentials to an existing key, using these values:
+
+    Package name:
+    F3:21:C4:88:B3:94:F4:67:78:1E:39:2A:4D:2A:72:29:9A:EB:EA:13
+
+    SHA-1 certificate fingerprint:
+    F3:21:C4:88:B3:94:F4:67:78:1E:39:2A:4D:2A:72:29:9A:EB:EA:13
+
+    Alternatively, follow the directions here:
+    https://developers.google.com/maps/documentation/android/start#get-key
+
+    Once you have your key (it starts with "AIza"), replace the "google_maps_key"
+    string in this file.
+    -->
+    <string name="google_maps_key" templateMergeStrategy="preserve" translatable="false">AIzaSyD27w0019WNIT4jLVbzOwjxA4_GdI9dlno</string>
+</resources>
