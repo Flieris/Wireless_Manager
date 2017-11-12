@@ -5,10 +5,14 @@
 package com.example.sebastian.wirelessmanager.telephony;
 
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.ConnectivityManager;
+import android.net.Network;
 import android.os.Bundle;
+import android.support.v4.content.ContextCompat;
 import android.telephony.CellIdentityCdma;
 import android.telephony.CellIdentityGsm;
 import android.telephony.CellIdentityLte;
@@ -19,6 +23,7 @@ import android.telephony.CellInfoGsm;
 import android.telephony.CellInfoLte;
 import android.telephony.CellInfoWcdma;
 import android.telephony.CellLocation;
+import android.telephony.NeighboringCellInfo;
 import android.telephony.PhoneStateListener;
 import android.telephony.ServiceState;
 import android.telephony.SignalStrength;
@@ -41,19 +46,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static android.Manifest.permission.ACCESS_COARSE_LOCATION;
+import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.Manifest.permission.READ_PHONE_STATE;
+
 /**
  * Created by Sebastian Lenkiewicz on 15.10.2017.
  */
 
 class MyPhoneStateListener extends PhoneStateListener implements LocationListener {
+    private int telephonyPermissionCheck;
+    private int fineLocationPermissionCheck;
+    private int coarseLocationPermissionCheck;
     private Context context;
     private View view;
     private LocationManager locationManager;
     private TelephonyManager telephonyManager;
     private Location mLocation;
-    private int cid,lac, signaldbm;
-    private String cellType;
-    private FirebaseDatabase firebaseDatabase;
+    private int cid,lac, signaldbm, mcc;
+    private String cellType, networkOperator;
     private FirebaseAuth firebaseAuth;
     private DatabaseReference databaseReference;
     MyPhoneStateListener(Context c, View v){
@@ -66,32 +77,50 @@ class MyPhoneStateListener extends PhoneStateListener implements LocationListene
         telephonyManager = (TelephonyManager)context.getSystemService(Context.TELEPHONY_SERVICE);
         locationManager = (LocationManager)context.getSystemService(Context.LOCATION_SERVICE);
         CellLocation.requestLocationUpdate();
+        fineLocationPermissionCheck = ContextCompat.checkSelfPermission(context, ACCESS_FINE_LOCATION);
+        coarseLocationPermissionCheck = ContextCompat.checkSelfPermission(context, ACCESS_COARSE_LOCATION);
+        telephonyPermissionCheck = ContextCompat.checkSelfPermission(context, READ_PHONE_STATE);
         // slightly increase value of minDistance
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,60000,0,this);
-        telephonyManager.listen(this,PhoneStateListener.LISTEN_CALL_STATE
-                | PhoneStateListener.LISTEN_CELL_INFO // Requires API 17
-                | PhoneStateListener.LISTEN_CELL_LOCATION
-                | PhoneStateListener.LISTEN_DATA_ACTIVITY
-                | PhoneStateListener.LISTEN_DATA_CONNECTION_STATE
-                | PhoneStateListener.LISTEN_SERVICE_STATE
-                | PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
+        if (fineLocationPermissionCheck == PackageManager.PERMISSION_GRANTED &&
+                coarseLocationPermissionCheck == PackageManager.PERMISSION_GRANTED &&
+                telephonyPermissionCheck == PackageManager.PERMISSION_GRANTED) {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 30000, 10, this);
+            telephonyManager.listen(this, PhoneStateListener.LISTEN_CALL_STATE
+                    | PhoneStateListener.LISTEN_CELL_INFO // Requires API 17
+                    | PhoneStateListener.LISTEN_CELL_LOCATION
+                    | PhoneStateListener.LISTEN_DATA_ACTIVITY
+                    | PhoneStateListener.LISTEN_DATA_CONNECTION_STATE
+                    | PhoneStateListener.LISTEN_SERVICE_STATE
+                    | PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
+        }
 
     }
     @Override
     public void onCellInfoChanged(List<CellInfo> cellInfo){
-        int id_ = telephonyManager.getNetworkType();
         if (cellInfo != null){
             onCellsChanged(cellInfo);
-        } else {
-            onCellsChanged(telephonyManager.getAllCellInfo());
         }
     }
     @Override
     public void onServiceStateChanged(ServiceState serviceState){
-        onCellsChanged(telephonyManager.getAllCellInfo());
+        coarseLocationPermissionCheck = ContextCompat.checkSelfPermission(context, ACCESS_COARSE_LOCATION);
+        telephonyPermissionCheck = ContextCompat.checkSelfPermission(context, READ_PHONE_STATE);
+        if (fineLocationPermissionCheck == PackageManager.PERMISSION_GRANTED &&
+                coarseLocationPermissionCheck == PackageManager.PERMISSION_GRANTED &&
+                telephonyPermissionCheck == PackageManager.PERMISSION_GRANTED) {
+            List<CellInfo> cellInfoList = telephonyManager.getAllCellInfo();
+            if (!cellInfoList.isEmpty())
+            {
+                onCellsChanged(cellInfoList);
+            } else{
+                CellLocation cellLocation = telephonyManager.getCellLocation();
+                onCellLocationChanged(cellLocation);
+            }
+        }
     }
     private void onCellsChanged(List<CellInfo> cellInfo){
         String operator = telephonyManager.getNetworkOperatorName();
+        networkOperator = operator;
         //onCellInfoChanged(telephonyManager.getAllCellInfo());
         TextView cellView = (TextView)view.findViewById(R.id.cell_tv);
         TextView dataView = (TextView)view.findViewById(R.id.cell_data);
@@ -152,58 +181,94 @@ class MyPhoneStateListener extends PhoneStateListener implements LocationListene
     }
     @Override
     public void onCellLocationChanged(CellLocation location){
-        onCellsChanged(telephonyManager.getAllCellInfo());
+        TextView cellView = (TextView)view.findViewById(R.id.cell_tv);
+        TextView dataView = (TextView)view.findViewById(R.id.cell_data);
+        int cell_ = 0, lac_ = 0;
+        String countryCode, operator, cellType;
+        countryCode = telephonyManager.getSimOperator();
+        String mcc = countryCode.substring(0,3);
+        String mnc = countryCode.substring(3);
+        operator = telephonyManager.getNetworkOperatorName();
+        cellType = getCellType();
+        if (location instanceof GsmCellLocation){
+            GsmCellLocation gsmCellLocation = (GsmCellLocation)location;
+            cell_ = gsmCellLocation.getCid();
+            lac_ = gsmCellLocation.getLac();
+        } else if (location instanceof  CdmaCellLocation){
+            CdmaCellLocation cdmaCellLocation = (CdmaCellLocation)location;
+            cell_ = cdmaCellLocation.getBaseStationId();
+            lac_ = cdmaCellLocation.getNetworkId();
+        }
+        cid = cell_;
+        lac = lac_;
+        String cellData = "Cell Id: " + cell_ + "\nLocal Area Code: " + lac_ + "\nMobile Country Code: " + mcc
+                + "\nMobile Network Code: " + mnc;
+        String phoneData = "Operator: " +  operator + " Cell Type: " + cellType;
+        cellView.setText(phoneData);
+        dataView.setText(cellData);
     }
 
     @Override
     public void onSignalStrengthsChanged(SignalStrength signalStrength){
+
+        super.onSignalStrengthsChanged(signalStrength);
         TextView signalText = (TextView)view.findViewById(R.id.signal_strength);
-        List<CellInfo> mcellinfo = telephonyManager.getAllCellInfo();
-        String signal_str = "";
-        String ssignal = signalStrength.toString();
-        String[] parts = ssignal.split(" ");
-        int phone_type = telephonyManager.getPhoneType();
-        if (mcellinfo != null) {
-            for (CellInfo c : mcellinfo) {
-                if (c instanceof CellInfoGsm) {
-                    CellInfoGsm cellInfoGsm = (CellInfoGsm) c;
-                    signaldbm = cellInfoGsm.getCellSignalStrength().getDbm();
-                    signal_str += "Gsm: " + cellInfoGsm.getCellSignalStrength().getDbm() + " [dBm]";
-                    break;
-                } else if (c instanceof CellInfoCdma) {
-                    CellInfoCdma cellInfoCdma = (CellInfoCdma) c;
-                    signaldbm = cellInfoCdma.getCellSignalStrength().getDbm();
-                    signal_str += "Cdma: " + cellInfoCdma.getCellSignalStrength().getDbm() + " [dBm]";
-                    break;
-                } else if (c instanceof CellInfoWcdma) {
-                    CellInfoWcdma cellInfoWcdma = (CellInfoWcdma) c;
-                    signaldbm = cellInfoWcdma.getCellSignalStrength().getDbm();
-                    signal_str += "Wcdma: " + cellInfoWcdma.getCellSignalStrength().getDbm()+ " [dBm]";
-                    break;
-                } else if (c instanceof CellInfoLte) {
-                    CellInfoLte cellInfoLte = (CellInfoLte) c;
-                    signaldbm = cellInfoLte.getCellSignalStrength().getDbm();
-                    signal_str += "Lte: " + cellInfoLte.getCellSignalStrength().getDbm() + " [dBm]";
-                    break;
+        coarseLocationPermissionCheck = ContextCompat.checkSelfPermission(context, ACCESS_COARSE_LOCATION);
+        telephonyPermissionCheck = ContextCompat.checkSelfPermission(context, READ_PHONE_STATE);
+        if (fineLocationPermissionCheck == PackageManager.PERMISSION_GRANTED &&
+                coarseLocationPermissionCheck == PackageManager.PERMISSION_GRANTED &&
+                telephonyPermissionCheck == PackageManager.PERMISSION_GRANTED) {
+            List<CellInfo> mcellinfo = telephonyManager.getAllCellInfo();
+            if (!mcellinfo.isEmpty()) {
+                String signal_str = "";
+                String ssignal = signalStrength.toString();
+                String[] parts = ssignal.split(" ");
+                int phone_type = telephonyManager.getPhoneType();
+                if (mcellinfo != null) {
+                    for (CellInfo c : mcellinfo) {
+                        if (c instanceof CellInfoGsm) {
+                            CellInfoGsm cellInfoGsm = (CellInfoGsm) c;
+                            signaldbm = cellInfoGsm.getCellSignalStrength().getDbm();
+                            signal_str = cellInfoGsm.getCellSignalStrength().getDbm() + " dBm";
+                            break;
+                        } else if (c instanceof CellInfoCdma) {
+                            CellInfoCdma cellInfoCdma = (CellInfoCdma) c;
+                            signaldbm = cellInfoCdma.getCellSignalStrength().getDbm();
+                            signal_str = cellInfoCdma.getCellSignalStrength().getDbm() + " dBm";
+                            break;
+                        } else if (c instanceof CellInfoWcdma) {
+                            CellInfoWcdma cellInfoWcdma = (CellInfoWcdma) c;
+                            signaldbm = cellInfoWcdma.getCellSignalStrength().getDbm();
+                            signal_str = cellInfoWcdma.getCellSignalStrength().getDbm() + " [dBm]";
+                            break;
+                        } else if (c instanceof CellInfoLte) {
+                            CellInfoLte cellInfoLte = (CellInfoLte) c;
+                            signaldbm = cellInfoLte.getCellSignalStrength().getDbm();
+                            signal_str = cellInfoLte.getCellSignalStrength().getDbm() + " [dBm]";
+                            break;
+                        }
+                    }
                 }
+                signalText.setText(signal_str);
+                signalText.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+            } else {
+                int signal_str=0;
+                String ssignal = signalStrength.toString();
+                String[] parts = ssignal.split(" ");
+                if ((telephonyManager.getNetworkType() == TelephonyManager.NETWORK_TYPE_GSM)
+                        || (telephonyManager.getNetworkType() == TelephonyManager.NETWORK_TYPE_EDGE)){
+                    signal_str = Integer.parseInt(parts[1]);
+                } else if ( telephonyManager.getNetworkType() == TelephonyManager.NETWORK_TYPE_LTE){
+                    signal_str = Integer.parseInt(parts[11]);
+                } else if(telephonyManager.getNetworkType() == TelephonyManager.NETWORK_TYPE_UMTS){
+                    signal_str = Integer.parseInt(parts[3]);
+                }
+                String text = "Signal Strength: " + signal_str + " dBm";
+                signaldbm = signal_str;
+                signalText.setText(text);
+                signalText.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
             }
         }
-        /*
-        switch(phone_type){
-            case (TelephonyManager.PHONE_TYPE_CDMA):
-                signal_str += signalStrength.getCdmaDbm() + " dBm";
-                break;
-            case (TelephonyManager.PHONE_TYPE_GSM):
-                signal_str += (signalStrength.getGsmSignalStrength()*2-113) + " dBm";
-                break;
-            case (TelephonyManager.NETWORK_TYPE_LTE):
-                break;
-            case (TelephonyManager.PHONE_TYPE_NONE):
-                break;
-        }
-        */
-        signalText.setText(signal_str);
-        signalText.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
     }
 
     @Override
@@ -215,7 +280,10 @@ class MyPhoneStateListener extends PhoneStateListener implements LocationListene
         if (firebaseAuth.getCurrentUser() != null){
             String userId = firebaseAuth.getCurrentUser().getUid();
             databaseReference = FirebaseDatabase.getInstance().getReference();
-            DatabaseReference dbRef = databaseReference.child("cells/"+cid).push();
+            mcc = Integer.parseInt(telephonyManager.getNetworkOperator().substring(0,3));
+            networkOperator = telephonyManager.getNetworkOperatorName();
+            cellType = getCellType();
+            DatabaseReference dbRef = databaseReference.child(mcc + "/" + networkOperator + "/" + cellType + "/" + cid).push();
             dbRef.setValue(cell);
 
         }
@@ -234,5 +302,30 @@ class MyPhoneStateListener extends PhoneStateListener implements LocationListene
     @Override
     public void onProviderDisabled(String s) {
 
+    }
+
+    private String getCellType(){
+        String type = "";
+        if (telephonyManager.getPhoneType() == TelephonyManager.PHONE_TYPE_GSM){
+            fineLocationPermissionCheck = ContextCompat.checkSelfPermission(context, ACCESS_FINE_LOCATION);
+            coarseLocationPermissionCheck = ContextCompat.checkSelfPermission(context, ACCESS_COARSE_LOCATION);
+            if (fineLocationPermissionCheck == PackageManager.PERMISSION_GRANTED &&
+                    coarseLocationPermissionCheck == PackageManager.PERMISSION_GRANTED) {
+                int networkType = telephonyManager.getNetworkType();
+                if (networkType == TelephonyManager.NETWORK_TYPE_UMTS
+                        || networkType == TelephonyManager.NETWORK_TYPE_HSDPA
+                        || networkType == TelephonyManager.NETWORK_TYPE_HSUPA
+                        || networkType == TelephonyManager.NETWORK_TYPE_HSPA){
+                    type = "UMTS";
+                } else if (networkType == TelephonyManager.NETWORK_TYPE_LTE){
+                    type = "LTE";
+                }
+                else {
+                    type = "GSM";
+                }
+            }
+
+        }
+        return type;
     }
 }

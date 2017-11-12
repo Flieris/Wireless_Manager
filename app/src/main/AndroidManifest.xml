@@ -30,7 +30,8 @@
         <activity android:name=".FragmentAdapter" />
         <activity android:name=".firebase.LoginActivity" />
         <activity android:name=".firebase.SignupActivity" />
-        <activity android:name=".firebase.ResetPasswordActivity"></activity>
+        <activity android:name=".firebase.ResetPasswordActivity" />
+        <activity android:name=".telephony.heatmap.HeatMapActivity"></activity>
     </application>
 
 </manifest>

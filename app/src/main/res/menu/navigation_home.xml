@@ -27,8 +27,8 @@
     <item android:title="@string/telephony_title">
         <menu>
             <item
-                android:id="@+id/telephony_test1"
-                android:title="@string/placeholder"/>
+                android:id="@+id/telephony_heatmap"
+                android:title="@string/telephony_heatmap"/>
             <item
                 android:id="@+id/telephony_test2"
                 android:title="@string/placeholder"/>

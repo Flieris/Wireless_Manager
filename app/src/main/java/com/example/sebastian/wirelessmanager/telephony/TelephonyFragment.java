@@ -7,8 +7,10 @@ package com.example.sebastian.wirelessmanager.telephony;
 
 import android.animation.ObjectAnimator;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.CardView;
 import android.telephony.TelephonyManager;
 import android.view.LayoutInflater;
@@ -18,6 +20,8 @@ import android.widget.TextView;
 
 import com.example.sebastian.wirelessmanager.telephony.MyPhoneStateListener;
 import com.example.sebastian.wirelessmanager.R;
+
+import static android.Manifest.permission.READ_PHONE_STATE;
 
 
 /**
@@ -65,10 +69,15 @@ public class TelephonyFragment extends Fragment {
         context = super.getContext();
         //System.out.println(R.id.telephony_tv);
         tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-        String IMEINumber=tm.getDeviceId();
-        String subscriberID=tm.getDeviceId();
-        String SIMSerialNumber=tm.getSimSerialNumber();
-        String strphoneType="";
+        String IMEINumber = "";
+        String subscriberID = "";
+        String SIMSerialNumber = "";
+        if (ContextCompat.checkSelfPermission(context, READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+            IMEINumber = tm.getDeviceId();
+            subscriberID = tm.getSubscriberId();
+            SIMSerialNumber = tm.getSimSerialNumber();
+        }
+            String strphoneType = "";
         //int phoneType=tm.getPhoneType();
         int networkType=tm.getNetworkType();
         switch (networkType)
