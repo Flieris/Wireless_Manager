@@ -26,6 +26,7 @@ import android.widget.Toast;
 
 import com.example.sebastian.wirelessmanager.firebase.LoginActivity;
 import com.example.sebastian.wirelessmanager.firebase.SignupActivity;
+import com.example.sebastian.wirelessmanager.telephony.MyPhoneStateListener;
 import com.example.sebastian.wirelessmanager.telephony.TelephonyFragment;
 import com.example.sebastian.wirelessmanager.telephony.heatmap.HeatMapActivity;
 import com.example.sebastian.wirelessmanager.wifi.WifiFragment;
@@ -34,15 +35,11 @@ import com.google.firebase.auth.FirebaseUser;
 
 import static android.Manifest.permission.ACCESS_COARSE_LOCATION;
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
-import static android.Manifest.permission.ACCESS_NETWORK_STATE;
-import static android.Manifest.permission.ACCESS_WIFI_STATE;
-import static android.Manifest.permission.CHANGE_WIFI_STATE;
 import static android.Manifest.permission.READ_PHONE_STATE;
 
 public class MainActivity extends AppCompatActivity {
     String[] permissionsRequired = new String[]{READ_PHONE_STATE,
-    ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION, ACCESS_WIFI_STATE, ACCESS_NETWORK_STATE,
-            CHANGE_WIFI_STATE};
+    ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION};
     DrawerLayout drawerLayout;
     NavigationView navigationView;
     private static final int REQUEST_MULTIPLE_PERMISSIONS = 322;
@@ -141,16 +138,10 @@ public class MainActivity extends AppCompatActivity {
     private void permissionsCheck(){
         if ((ContextCompat.checkSelfPermission(MainActivity.this,permissionsRequired[0]) != PackageManager.PERMISSION_GRANTED)
             ||(ContextCompat.checkSelfPermission(MainActivity.this,permissionsRequired[1]) != PackageManager.PERMISSION_GRANTED)
-            || (ContextCompat.checkSelfPermission(MainActivity.this,permissionsRequired[2]) != PackageManager.PERMISSION_GRANTED)
-            || (ContextCompat.checkSelfPermission(MainActivity.this,permissionsRequired[3]) != PackageManager.PERMISSION_GRANTED)
-            || (ContextCompat.checkSelfPermission(MainActivity.this,permissionsRequired[4]) != PackageManager.PERMISSION_GRANTED)
-            || (ContextCompat.checkSelfPermission(MainActivity.this,permissionsRequired[5]) != PackageManager.PERMISSION_GRANTED)){
+            || (ContextCompat.checkSelfPermission(MainActivity.this,permissionsRequired[2]) != PackageManager.PERMISSION_GRANTED)){
             if(ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,permissionsRequired[0])
                 ||ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,permissionsRequired[1])
-                || ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,permissionsRequired[2])
-                || ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,permissionsRequired[3])
-                || ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,permissionsRequired[4])
-                || ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,permissionsRequired[5])){
+                || ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,permissionsRequired[2])){
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 builder.setTitle("Need Multiple Permissions");
                 builder.setMessage("This app needs Camera and Location permissions.");

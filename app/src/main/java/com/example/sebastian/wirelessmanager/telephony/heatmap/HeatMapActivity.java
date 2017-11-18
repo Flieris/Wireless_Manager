@@ -4,6 +4,7 @@
 
 package com.example.sebastian.wirelessmanager.telephony.heatmap;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -13,11 +14,19 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.support.v4.content.ContextCompat;
+import android.telephony.CellIdentityCdma;
+import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.Toast;
 
 import com.example.sebastian.wirelessmanager.MainActivity;
 import com.example.sebastian.wirelessmanager.R;
+import com.example.sebastian.wirelessmanager.telephony.Cell;
+import com.example.sebastian.wirelessmanager.telephony.MyPhoneStateListener;
+import com.example.sebastian.wirelessmanager.telephony.TelephonyFragment;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApi;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -29,8 +38,28 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.TileOverlay;
+import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+import com.google.maps.android.heatmaps.HeatmapTileProvider;
+import com.google.maps.android.heatmaps.WeightedLatLng;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 
@@ -38,12 +67,17 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
         GoogleMap.OnMyLocationButtonClickListener,
         GoogleMap.OnMyLocationClickListener,
         GoogleMap.OnMapLoadedCallback {
-
+    private FirebaseAuth firebaseAuth;
+    private DatabaseReference mDatabase;
     private GoogleMap mMap;
-    private GoogleApiClient mGoogleApiClient;
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private Location mLastKnownLocation;
     private static final int DEFAULT_ZOOM = 15;
+    //heatMap stuff:
+    private ArrayList<Cell> cellList;
+    private HeatmapTileProvider mProvider;
+    private TileOverlay mOverlay;
+    private ArrayList<WeightedLatLng> weightedLatLngList;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -52,6 +86,7 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
+        cellList = new ArrayList<>();
         mapFragment.getMapAsync(this);
     }
     @Override
@@ -74,10 +109,16 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+        getDataFromFirebase();
+        // mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
         if (ActivityCompat.checkSelfPermission(this,ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
             mMap.setMyLocationEnabled(true);
             getDeviceLocation();
         }
+        final LayoutInflater factory = getLayoutInflater();
+        final View telephonyView = factory.inflate(R.layout.fragment_telephony,null);
+        MyPhoneStateListener phoneStateListener = new MyPhoneStateListener(this.getApplicationContext(),telephonyView);
+        phoneStateListener.start();
         mMap.setOnMyLocationButtonClickListener(this);
     }
 
@@ -134,5 +175,81 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
         } catch (SecurityException e) {
             Log.e("Exception: %s", e.getMessage());
         }
+    }
+
+    private void addHeatMap(){
+        List<WeightedLatLng> list = null;
+        getDataFromFirebase();
+        Log.i("test",cellList.toString());
+
+        //mProvider = new HeatmapTileProvider.Builder()
+         //       .weightedData(list)
+          //      .build();
+    }
+
+    private void getDataFromFirebase() {
+
+        weightedLatLngList = new ArrayList<>();
+        TelephonyManager mTelephony = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
+        final int mcc = Integer.parseInt(mTelephony.getNetworkOperator().substring(0, 3));
+        final String operator = mTelephony.getNetworkOperatorName();
+        int fineLocationPermissionCheck = ContextCompat.checkSelfPermission(this, ACCESS_FINE_LOCATION);
+        String type = "";
+        if (fineLocationPermissionCheck == PackageManager.PERMISSION_GRANTED) {
+            int networkType = mTelephony.getNetworkType();
+            if (networkType == TelephonyManager.NETWORK_TYPE_UMTS
+                    || networkType == TelephonyManager.NETWORK_TYPE_HSDPA
+                    || networkType == TelephonyManager.NETWORK_TYPE_HSUPA
+                    || networkType == TelephonyManager.NETWORK_TYPE_HSPA) {
+                type = "UMTS";
+            } else if (networkType == TelephonyManager.NETWORK_TYPE_LTE) {
+                type = "LTE";
+            } else {
+                type = "GSM";
+            }
+        }
+        firebaseAuth = FirebaseAuth.getInstance();
+        //something here is fucked wtih setPersistanceEnabled(true);
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        // database.setPersistenceEnabled(true);
+        mDatabase = database.getReference(mcc + "/" + operator + "/" + type);
+        final String finalType = type;
+        ValueEventListener cellListener = new ValueEventListener() {
+            ArrayList<WeightedLatLng> list = new ArrayList<>();
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                for (DataSnapshot cellSnapshot: dataSnapshot.getChildren()){
+                    for(DataSnapshot pointSnapshot: cellSnapshot.getChildren()){
+                        Cell cell = pointSnapshot.getValue(Cell.class);
+                        double lat = cell.latitude;
+                        double lng = cell.longitude;
+                        double dBm = 200 + cell.signalStrength;
+                        LatLng point = new LatLng(lat,lng);
+                        WeightedLatLng weightedPoint = new WeightedLatLng(point,dBm);
+                        list.add(weightedPoint);
+                    }
+                }
+                // find an alternative to heatmap
+                // find a way so points dissipate with zoom
+                mProvider = new HeatmapTileProvider.Builder()
+                        .weightedData(list)
+                        .radius(20)
+                        .opacity(0.5)
+                        .build();
+                //mProvider.setRadius();
+                mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
+
+
+            }
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.w("DatabaseError", "loadPost:onCancelled", databaseError.toException());
+            }
+        };
+        mDatabase.addListenerForSingleValueEvent(cellListener);
+    }
+
+    private void updateCellList(ArrayList<Cell> inputArray){
+        cellList.addAll(inputArray);
     }
 }

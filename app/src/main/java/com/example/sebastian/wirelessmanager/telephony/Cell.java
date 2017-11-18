@@ -28,14 +28,15 @@ public class Cell {
     }
     @Override
     public String toString(){
-         return new StringBuilder()
-                 .append("{Cell: ")
-                 .append(" type= ").append(cellType)
-                 .append(" id= ").append(cellId)
-                 .append(" lac= ").append(lac)
-                 .append(" signalStrength= ").append(signalStrength)
-                 .append(" longitude= ").append(longitude)
-                 .append(" latitude= ").append(latitude)
-                 .append("}").toString();
+         return "{Cell: " +
+                 " type= " + cellType +
+                 " id= " + cellId +
+                 " lac= " + lac +
+                 " signalStrength= " + signalStrength +
+                 " longitude= " + longitude +
+                 " latitude= " + latitude +
+                 "}";
     }
+
+
 }

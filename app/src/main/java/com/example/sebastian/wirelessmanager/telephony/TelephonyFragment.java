@@ -32,6 +32,7 @@ public class TelephonyFragment extends Fragment {
     TelephonyManager tm;
     TextView textView, cellView, abcView;
     CardView dataView;
+    View thisView;
     public TelephonyFragment() {
         // Required empty public constructor
     }
@@ -41,10 +42,6 @@ public class TelephonyFragment extends Fragment {
         super.onCreate(SavedInstanceState);
 
     }
-    /*
-        TODO:
-        -> implement expandable cards
-     */
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -105,9 +102,12 @@ public class TelephonyFragment extends Fragment {
         info+="\n Sim Serial Number:"+SIMSerialNumber;
         info+="\n Phone Network Type:"+strphoneType;
         textView.setText(info);
-        MyPhoneStateListener myPhoneStateListener = new MyPhoneStateListener(context,view);
-        myPhoneStateListener.start();
+        thisView = view;
+        createListener();
         return view;
     }
-
+    public void createListener(){
+        MyPhoneStateListener myPhoneStateListener = new MyPhoneStateListener(context,thisView);
+        myPhoneStateListener.start();
+    }
 }

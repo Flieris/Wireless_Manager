@@ -30,6 +30,7 @@ import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
 import android.telephony.cdma.CdmaCellLocation;
 import android.telephony.gsm.GsmCellLocation;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
@@ -54,7 +55,7 @@ import static android.Manifest.permission.READ_PHONE_STATE;
  * Created by Sebastian Lenkiewicz on 15.10.2017.
  */
 
-class MyPhoneStateListener extends PhoneStateListener implements LocationListener {
+public class MyPhoneStateListener extends PhoneStateListener implements LocationListener {
     private int telephonyPermissionCheck;
     private int fineLocationPermissionCheck;
     private int coarseLocationPermissionCheck;
@@ -67,13 +68,13 @@ class MyPhoneStateListener extends PhoneStateListener implements LocationListene
     private String cellType, networkOperator;
     private FirebaseAuth firebaseAuth;
     private DatabaseReference databaseReference;
-    MyPhoneStateListener(Context c, View v){
+    public MyPhoneStateListener(Context c, View v){
         context = c;
         view = v;
-        FirebaseDatabase.getInstance().setPersistenceEnabled(true);
     }
 
-    void start(){
+
+    public void start(){
         telephonyManager = (TelephonyManager)context.getSystemService(Context.TELEPHONY_SERVICE);
         locationManager = (LocationManager)context.getSystemService(Context.LOCATION_SERVICE);
         CellLocation.requestLocationUpdate();
@@ -278,7 +279,6 @@ class MyPhoneStateListener extends PhoneStateListener implements LocationListene
         Cell cell = new Cell(cid,lac,signaldbm,mLocation.getLongitude(),mLocation.getLatitude(),cellType);
         firebaseAuth = FirebaseAuth.getInstance();
         if (firebaseAuth.getCurrentUser() != null){
-            String userId = firebaseAuth.getCurrentUser().getUid();
             databaseReference = FirebaseDatabase.getInstance().getReference();
             mcc = Integer.parseInt(telephonyManager.getNetworkOperator().substring(0,3));
             networkOperator = telephonyManager.getNetworkOperatorName();
