@@ -1,9 +1,12 @@
 <!--
   ~ Copyright (c) Sebastian Lenkiewicz 2017.
   -->
-
-<fragment xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:map="http://schemas.android.com/apk/res-auto"
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/map_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+<fragment
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/map"
     android:name="com.google.android.gms.maps.SupportMapFragment"
@@ -11,3 +14,47 @@
     android:layout_height="match_parent"
     android:keepScreenOn="true"
     tools:context="com.example.sebastian.wirelessmanager.telephony.heatmap.HeatMapActivity" />
+    <ScrollView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true">
+        <LinearLayout
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            android:paddingRight="5dp"
+            android:paddingEnd="5dp"
+            android:background="@color/white"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/map_network_operator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/placeholder"/>
+            <TextView
+                android:id="@+id/map_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/type_selection_text"/>
+            <RadioGroup
+                android:id="@+id/cell_selection"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1">
+                <RadioButton
+                    android:id="@+id/type_lte"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/map_lte"/>
+                <RadioButton
+                    android:id="@+id/type_umts"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/map_umts"/>
+            </RadioGroup>
+        </LinearLayout>
+    </ScrollView>
+</RelativeLayout>

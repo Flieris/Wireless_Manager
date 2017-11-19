@@ -39,4 +39,7 @@
     <string name="firebase_disconnected">Firebase: disconnected</string>
     <string name="telephony_heatmap">Heatmap</string>
     <string name="title_activity_heat_map">Map</string>
+    <string name="map_lte">LTE</string>
+    <string name="map_umts">UMTS</string>
+    <string name="type_selection_text">Network Type:</string>
 </resources>

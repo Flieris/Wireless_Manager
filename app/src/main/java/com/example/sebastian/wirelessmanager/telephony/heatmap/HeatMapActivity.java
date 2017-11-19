@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
+import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -20,6 +21,9 @@ import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.sebastian.wirelessmanager.MainActivity;
@@ -67,13 +71,18 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
         GoogleMap.OnMyLocationButtonClickListener,
         GoogleMap.OnMyLocationClickListener,
         GoogleMap.OnMapLoadedCallback {
+    //Ui components:
+    private TextView operatorTv;
+    private RadioButton lteRadio, umtsRadio;
+    //Firebase reference and data:
     private FirebaseAuth firebaseAuth;
     private DatabaseReference mDatabase;
+    //GoogleMap and Location:
     private GoogleMap mMap;
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private Location mLastKnownLocation;
     private static final int DEFAULT_ZOOM = 15;
-    //heatMap stuff:
+    //Cell heat map:
     private ArrayList<Cell> cellList;
     private HeatmapTileProvider mProvider;
     private TileOverlay mOverlay;
@@ -87,6 +96,12 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         cellList = new ArrayList<>();
+        operatorTv = (TextView)findViewById(R.id.map_network_operator);
+        lteRadio = (RadioButton)findViewById(R.id.type_lte);
+        umtsRadio = (RadioButton)findViewById(R.id.type_umts);
+        TelephonyManager mTelephony = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
+        operatorTv.setText(mTelephony.getNetworkOperatorName());
+        setRadioButtons();
         mapFragment.getMapAsync(this);
     }
     @Override
@@ -193,6 +208,89 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
         TelephonyManager mTelephony = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
         final int mcc = Integer.parseInt(mTelephony.getNetworkOperator().substring(0, 3));
         final String operator = mTelephony.getNetworkOperatorName();
+        firebaseAuth = FirebaseAuth.getInstance();
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        // database.setPersistenceEnabled(true);
+        RadioGroup cellSelection = (RadioGroup)findViewById(R.id.cell_selection);
+        int id = cellSelection.getCheckedRadioButtonId();
+        String type;
+        switch(id){
+            case R.id.type_lte:
+                type = "LTE";
+                break;
+            case R.id.type_umts:
+                type = "UMTS";
+                break;
+            default:
+                // if somehow none is selected let's just break the app
+                type = "UNKNOWN";
+                break;
+        }
+        final String finalType = getNetworkType();
+        mDatabase = database.getReference(mcc + "/" + operator + "/" + type);
+        ValueEventListener cellListener = new ValueEventListener() {
+            ArrayList<WeightedLatLng> list = new ArrayList<>();
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                for (DataSnapshot cellSnapshot: dataSnapshot.getChildren()){
+                    for(DataSnapshot pointSnapshot: cellSnapshot.getChildren()){
+                        Cell cell = pointSnapshot.getValue(Cell.class);
+                        double lat = cell.latitude;
+                        double lng = cell.longitude;
+                        double dBm = 200 + cell.signalStrength;
+                        LatLng point = new LatLng(lat,lng);
+                        System.out.println(cell.toString());
+                        WeightedLatLng weightedPoint = new WeightedLatLng(point,dBm);
+                        list.add(weightedPoint);
+                    }
+                }
+                // find an alternative to heatmap
+                // find a way so points dissipate with zoom
+                mProvider = new HeatmapTileProvider.Builder()
+                        .weightedData(list)
+                        .radius(20)
+                        .opacity(0.5)
+                        .build();
+                mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
+                mOverlay.clearTileCache();
+                RadioGroup cellSelection = (RadioGroup)findViewById(R.id.cell_selection);
+                cellSelection.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(RadioGroup radioGroup, int i) {
+                        mOverlay.remove();
+                        getDataFromFirebase();
+                    }
+                });
+            }
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.w("DatabaseError", "loadPost:onCancelled", databaseError.toException());
+            }
+        };
+        mDatabase.addValueEventListener(cellListener);
+    }
+    private void setRadioButtons(){
+        TelephonyManager mTelephony = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
+        int fineLocationPermissionCheck = ContextCompat.checkSelfPermission(this, ACCESS_FINE_LOCATION);
+        if (fineLocationPermissionCheck == PackageManager.PERMISSION_GRANTED) {
+            int networkType = mTelephony.getNetworkType();
+            if (networkType == TelephonyManager.NETWORK_TYPE_UMTS
+                    || networkType == TelephonyManager.NETWORK_TYPE_HSDPA
+                    || networkType == TelephonyManager.NETWORK_TYPE_HSUPA
+                    || networkType == TelephonyManager.NETWORK_TYPE_HSPA) {
+                umtsRadio.setChecked(true);
+                lteRadio.setChecked(false);
+            } else if (networkType == TelephonyManager.NETWORK_TYPE_LTE) {
+                lteRadio.setChecked(true);
+                umtsRadio.setChecked(false);
+            } else {
+                lteRadio.setChecked(false);
+                umtsRadio.setChecked(false);
+            }
+        }
+    }
+    private String getNetworkType(){
+        TelephonyManager mTelephony = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
         int fineLocationPermissionCheck = ContextCompat.checkSelfPermission(this, ACCESS_FINE_LOCATION);
         String type = "";
         if (fineLocationPermissionCheck == PackageManager.PERMISSION_GRANTED) {
@@ -208,48 +306,6 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
                 type = "GSM";
             }
         }
-        firebaseAuth = FirebaseAuth.getInstance();
-        //something here is fucked wtih setPersistanceEnabled(true);
-        FirebaseDatabase database = FirebaseDatabase.getInstance();
-        // database.setPersistenceEnabled(true);
-        mDatabase = database.getReference(mcc + "/" + operator + "/" + type);
-        final String finalType = type;
-        ValueEventListener cellListener = new ValueEventListener() {
-            ArrayList<WeightedLatLng> list = new ArrayList<>();
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                for (DataSnapshot cellSnapshot: dataSnapshot.getChildren()){
-                    for(DataSnapshot pointSnapshot: cellSnapshot.getChildren()){
-                        Cell cell = pointSnapshot.getValue(Cell.class);
-                        double lat = cell.latitude;
-                        double lng = cell.longitude;
-                        double dBm = 200 + cell.signalStrength;
-                        LatLng point = new LatLng(lat,lng);
-                        WeightedLatLng weightedPoint = new WeightedLatLng(point,dBm);
-                        list.add(weightedPoint);
-                    }
-                }
-                // find an alternative to heatmap
-                // find a way so points dissipate with zoom
-                mProvider = new HeatmapTileProvider.Builder()
-                        .weightedData(list)
-                        .radius(20)
-                        .opacity(0.5)
-                        .build();
-                //mProvider.setRadius();
-                mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
-
-
-            }
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                Log.w("DatabaseError", "loadPost:onCancelled", databaseError.toException());
-            }
-        };
-        mDatabase.addListenerForSingleValueEvent(cellListener);
-    }
-
-    private void updateCellList(ArrayList<Cell> inputArray){
-        cellList.addAll(inputArray);
+        return type;
     }
 }
