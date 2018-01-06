@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) Sebastian Lenkiewicz 2017.
+  ~ Copyright (c) Sebastian Lenkiewicz 2018.
   -->
 
 <resources>
@@ -42,4 +42,5 @@
     <string name="map_lte">LTE</string>
     <string name="map_umts">UMTS</string>
     <string name="type_selection_text">Network Type:</string>
+    <string name="border_txt">Show border</string>
 </resources>

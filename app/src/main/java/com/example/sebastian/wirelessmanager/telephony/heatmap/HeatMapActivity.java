@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Sebastian Lenkiewicz 2017.
+ * Copyright (c) Sebastian Lenkiewicz 2018.
  */
 
 package com.example.sebastian.wirelessmanager.telephony.heatmap;
@@ -21,6 +21,7 @@ import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.CheckBox;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
@@ -233,15 +234,22 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 for (DataSnapshot cellSnapshot: dataSnapshot.getChildren()){
-                    for(DataSnapshot pointSnapshot: cellSnapshot.getChildren()){
-                        Cell cell = pointSnapshot.getValue(Cell.class);
-                        double lat = cell.latitude;
-                        double lng = cell.longitude;
-                        double dBm = 200 + cell.signalStrength;
-                        LatLng point = new LatLng(lat,lng);
-                        System.out.println(cell.toString());
-                        WeightedLatLng weightedPoint = new WeightedLatLng(point,dBm);
-                        list.add(weightedPoint);
+                    System.out.println(cellSnapshot.getKey());
+                    if (cellSnapshot.getKey().equals("Border") || cellSnapshot.getKey().equals("border")) {
+                        CheckBox borderCheckbox = (CheckBox)findViewById(R.id.border_cb);
+                        if (borderCheckbox.isChecked()) {
+                            System.out.println("test");
+                        }
+                    } else {
+                        for (DataSnapshot pointSnapshot : cellSnapshot.getChildren()) {
+                            Cell cell = pointSnapshot.getValue(Cell.class);
+                            double lat = cell.latitude;
+                            double lng = cell.longitude;
+                            double dBm = 200 + cell.signalStrength;
+                            LatLng point = new LatLng(lat, lng);
+                            WeightedLatLng weightedPoint = new WeightedLatLng(point, dBm);
+                            list.add(weightedPoint);
+                        }
                     }
                 }
                 // find an alternative to heatmap

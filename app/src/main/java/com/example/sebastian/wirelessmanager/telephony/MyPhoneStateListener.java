@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Sebastian Lenkiewicz 2017.
+ * Copyright (c) Sebastian Lenkiewicz 2018.
  */
 
 package com.example.sebastian.wirelessmanager.telephony;
@@ -9,8 +9,6 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.net.ConnectivityManager;
-import android.net.Network;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 import android.telephony.CellIdentityCdma;
@@ -23,7 +21,6 @@ import android.telephony.CellInfoGsm;
 import android.telephony.CellInfoLte;
 import android.telephony.CellInfoWcdma;
 import android.telephony.CellLocation;
-import android.telephony.NeighboringCellInfo;
 import android.telephony.PhoneStateListener;
 import android.telephony.ServiceState;
 import android.telephony.SignalStrength;
@@ -219,56 +216,40 @@ public class MyPhoneStateListener extends PhoneStateListener implements Location
         if (fineLocationPermissionCheck == PackageManager.PERMISSION_GRANTED &&
                 coarseLocationPermissionCheck == PackageManager.PERMISSION_GRANTED &&
                 telephonyPermissionCheck == PackageManager.PERMISSION_GRANTED) {
-            List<CellInfo> mcellinfo = telephonyManager.getAllCellInfo();
-            if (!mcellinfo.isEmpty()) {
-                String signal_str = "";
-                String ssignal = signalStrength.toString();
-                String[] parts = ssignal.split(" ");
-                int phone_type = telephonyManager.getPhoneType();
-                if (mcellinfo != null) {
-                    for (CellInfo c : mcellinfo) {
-                        if (c instanceof CellInfoGsm) {
-                            CellInfoGsm cellInfoGsm = (CellInfoGsm) c;
-                            signaldbm = cellInfoGsm.getCellSignalStrength().getDbm();
-                            signal_str = cellInfoGsm.getCellSignalStrength().getDbm() + " dBm";
-                            break;
-                        } else if (c instanceof CellInfoCdma) {
-                            CellInfoCdma cellInfoCdma = (CellInfoCdma) c;
-                            signaldbm = cellInfoCdma.getCellSignalStrength().getDbm();
-                            signal_str = cellInfoCdma.getCellSignalStrength().getDbm() + " dBm";
-                            break;
-                        } else if (c instanceof CellInfoWcdma) {
-                            CellInfoWcdma cellInfoWcdma = (CellInfoWcdma) c;
-                            signaldbm = cellInfoWcdma.getCellSignalStrength().getDbm();
-                            signal_str = cellInfoWcdma.getCellSignalStrength().getDbm() + " [dBm]";
-                            break;
-                        } else if (c instanceof CellInfoLte) {
-                            CellInfoLte cellInfoLte = (CellInfoLte) c;
-                            signaldbm = cellInfoLte.getCellSignalStrength().getDbm();
-                            signal_str = cellInfoLte.getCellSignalStrength().getDbm() + " [dBm]";
-                            break;
-                        }
+            int signal_str=0;
+            int asu = 0;
+            try {
+                Method[] methods = android.telephony.SignalStrength.class
+                        .getMethods();
+                for (Method mthd : methods) {
+                    System.out.println(mthd.toString());
+                    if (mthd.getName().equals("getAsuLevel")) {
+                        Log.i("tag",
+                                "onSignalStrengthsChanged: " + mthd.getName() + " "
+                                        + mthd.invoke(signalStrength));
+                        asu = Integer.parseInt(mthd.invoke(signalStrength).toString());
                     }
                 }
-                signalText.setText(signal_str);
-                signalText.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
-            } else {
-                int signal_str=0;
-                String ssignal = signalStrength.toString();
-                String[] parts = ssignal.split(" ");
-                if ((telephonyManager.getNetworkType() == TelephonyManager.NETWORK_TYPE_GSM)
-                        || (telephonyManager.getNetworkType() == TelephonyManager.NETWORK_TYPE_EDGE)){
-                    signal_str = Integer.parseInt(parts[1]);
-                } else if ( telephonyManager.getNetworkType() == TelephonyManager.NETWORK_TYPE_LTE){
-                    signal_str = Integer.parseInt(parts[11]);
-                } else if(telephonyManager.getNetworkType() == TelephonyManager.NETWORK_TYPE_UMTS){
-                    signal_str = Integer.parseInt(parts[3]);
-                }
-                String text = "Signal Strength: " + signal_str + " dBm";
-                signaldbm = signal_str;
-                signalText.setText(text);
-                signalText.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+            } catch (SecurityException | IllegalArgumentException | InvocationTargetException | IllegalAccessException e){
+                e.printStackTrace();
             }
+            if (telephonyManager.getNetworkType() == TelephonyManager.NETWORK_TYPE_LTE){
+                signal_str = asu - 140;
+
+            } else if (telephonyManager.getNetworkType() == TelephonyManager.NETWORK_TYPE_UMTS
+                    || telephonyManager.getNetworkType() == TelephonyManager.NETWORK_TYPE_HSDPA
+                    || telephonyManager.getNetworkType() == TelephonyManager.NETWORK_TYPE_HSUPA
+                    || telephonyManager.getNetworkType() == TelephonyManager.NETWORK_TYPE_HSPA) {
+                signal_str = asu - 116;
+            }
+            else {
+                // TS 27.0007 - V10.3.0 sub clause 8.5 for gsm and umts signal strength
+                signal_str = (asu*2)-113;
+            }
+            String text = signal_str + " [dBm] asu: " + asu;
+            signaldbm = signal_str;
+            signalText.setText(text);
+            signalText.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
         }
     }
 
