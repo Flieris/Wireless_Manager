@@ -43,4 +43,14 @@
     <string name="map_umts">UMTS</string>
     <string name="type_selection_text">Network Type:</string>
     <string name="border_txt">Show border</string>
+    <string name="firebase_signOut">Sign Out</string>
+    <string name="reset_password">Reset Password</string>
+    <string name="pick_cell">Pick network type to show</string>
+    <string name="border_convex">Convex border</string>
+    <string name="border_concave">Concave border</string>
+    <string name="border_cluster">Cell clusters</string>
+    <string name="border_best_pilot">Show best pilot</string>
+    <string name="pick_cell_type">Network:</string>
+    <string name="pick_border_type">Border options:</string>
+    <string name="map_heatmap">Signal heatmap</string>
 </resources>

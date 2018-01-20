@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Sebastian Lenkiewicz 2017.
+ * Copyright (c) Sebastian Lenkiewicz 2018.
  */
 
 package com.example.sebastian.wirelessmanager;
@@ -7,8 +7,10 @@ package com.example.sebastian.wirelessmanager;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.NavigationView;
+import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.GravityCompat;
@@ -17,16 +19,14 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-import android.support.design.widget.TabLayout;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.sebastian.wirelessmanager.firebase.LoginActivity;
 import com.example.sebastian.wirelessmanager.firebase.SignupActivity;
-import com.example.sebastian.wirelessmanager.telephony.MyPhoneStateListener;
 import com.example.sebastian.wirelessmanager.telephony.TelephonyFragment;
 import com.example.sebastian.wirelessmanager.telephony.heatmap.HeatMapActivity;
 import com.example.sebastian.wirelessmanager.wifi.WifiFragment;
@@ -52,17 +52,17 @@ public class MainActivity extends AppCompatActivity {
         permissionsCheck();
         mAuth = FirebaseAuth.getInstance();
         final FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
-        navigationView = (NavigationView) findViewById(R.id.navigation);
+        drawerLayout = findViewById(R.id.drawer_layout);
+        navigationView = findViewById(R.id.navigation);
         updateUI(user);
         setupNavigationDrawer();
         drawerLayout.setDrawerListener(mDrawerToggle);
-        ViewPager viewPager = (ViewPager) findViewById(R.id.viewpager);
+        ViewPager viewPager = findViewById(R.id.viewpager);
         FragmentAdapter fragmentAdapter = new FragmentAdapter(getSupportFragmentManager());
-        fragmentAdapter.addFragment(new WifiFragment(), "Wi-Fi");
         fragmentAdapter.addFragment(new TelephonyFragment(), "Telephony");
+        fragmentAdapter.addFragment(new WifiFragment(), "Wi-Fi");
         viewPager.setAdapter(fragmentAdapter);
-        TabLayout tabLayout = (TabLayout) findViewById(R.id.tab_id);
+        TabLayout tabLayout = findViewById(R.id.tab_id);
         tabLayout.setupWithViewPager(viewPager);
     }
     @Override
@@ -70,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
         super.onStart();
         FirebaseUser currentUser = mAuth.getCurrentUser();
     }
+
     @Override
     public void onBackPressed(){
         if (drawerLayout.isDrawerOpen(GravityCompat.START)){
@@ -94,16 +95,17 @@ public class MainActivity extends AppCompatActivity {
                         startActivity(new Intent(MainActivity.this, SignupActivity.class));
                         finish();
                         break;
-                    case R.id.wifi_test1:
-                        break;
-                    case R.id.wifi_test2:
+                    case R.id.firebase_signOut:
+                        FirebaseUser currentUser = mAuth.getCurrentUser();
+                        if (currentUser != null) {
+                            Toast.makeText(getApplicationContext(), "Sing out!",Toast.LENGTH_LONG).show();
+                            FirebaseAuth.getInstance().signOut();
+                        }
                         break;
                     case R.id.telephony_heatmap:
                         Toast.makeText(getApplicationContext(), "Telephony heatmap!",Toast.LENGTH_LONG).show();
                         startActivity(new Intent(MainActivity.this, HeatMapActivity.class));
                         finish();
-                        break;
-                    case R.id.telephony_test2:
                         break;
                     default:
                         break;
@@ -115,11 +117,9 @@ public class MainActivity extends AppCompatActivity {
                 R.string.drawer_open,R.string.drawer_close){
             public void onDrawerClosed(View view){
                 super.onDrawerClosed(view);
-                //invalidateOptionsMenu();
             }
             public void onDrawerOpened(View drawerView){
                 super.onDrawerOpened(drawerView);
-                //invalidateOptionsMenu();
             }
         };
     }
@@ -127,10 +127,14 @@ public class MainActivity extends AppCompatActivity {
     private void updateUI(FirebaseUser user){
 
         View hView = navigationView.getHeaderView(0);
-        TextView firebase_status = (TextView)hView.findViewById(R.id.firebase_status);
+        TextView firebase_status = hView.findViewById(R.id.firebase_status);
+        ImageView firebase_image = hView.findViewById(R.id.firebase_image);
         if (user != null){
-            firebase_status.setText(R.string.firebase_connected);
+            String email = "Connected User:" + user.getEmail();
+            firebase_image.setImageResource(R.drawable.firebase_on);
+            firebase_status.setText(email);
         } else {
+            firebase_image.setImageResource(R.drawable.firebase_off);
             firebase_status.setText(R.string.firebase_disconnected);
         }
     }
@@ -144,7 +148,7 @@ public class MainActivity extends AppCompatActivity {
                 || ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,permissionsRequired[2])){
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 builder.setTitle("Need Multiple Permissions");
-                builder.setMessage("This app needs Camera and Location permissions.");
+                builder.setMessage("This app needs Telephony and Location permissions.");
                 builder.setPositiveButton("Grant", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {

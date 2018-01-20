@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Sebastian Lenkiewicz 2017.
+ * Copyright (c) Sebastian Lenkiewicz 2018.
  */
 
 package com.example.sebastian.wirelessmanager.telephony;
@@ -7,21 +7,15 @@ package com.example.sebastian.wirelessmanager.telephony;
 
 import android.animation.ObjectAnimator;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.CardView;
-import android.telephony.TelephonyManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.example.sebastian.wirelessmanager.telephony.MyPhoneStateListener;
 import com.example.sebastian.wirelessmanager.R;
-
-import static android.Manifest.permission.READ_PHONE_STATE;
 
 
 /**
@@ -29,10 +23,10 @@ import static android.Manifest.permission.READ_PHONE_STATE;
  */
 public class TelephonyFragment extends Fragment {
     Context context;
-    TelephonyManager tm;
-    TextView textView, cellView, abcView;
+    TextView cellCardView;
     CardView dataView;
     View thisView;
+    MyPhoneStateListener myPhoneStateListener;
     public TelephonyFragment() {
         // Required empty public constructor
     }
@@ -42,72 +36,37 @@ public class TelephonyFragment extends Fragment {
         super.onCreate(SavedInstanceState);
 
     }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_telephony, container, false);
         context = super.getContext();
-        textView=(TextView)view.findViewById(R.id.system_info);
-        cellView=(TextView)view.findViewById(R.id.cell_tv);
-        abcView=(TextView)view.findViewById(R.id.cell_data);
-        dataView=(CardView)view.findViewById(R.id.cell_info);
+        cellCardView = view.findViewById(R.id.cell_data);
+        dataView= view.findViewById(R.id.cell_info);
         dataView.setOnClickListener(new View.OnClickListener(){
             public void onClick(View v) {
-                if (abcView.getVisibility() == View.GONE) {
-                    abcView.setVisibility(View.VISIBLE);
+                if (cellCardView.getVisibility() == View.GONE) {
+                    cellCardView.setVisibility(View.VISIBLE);
                 } else {
-                    abcView.setVisibility(View.GONE);
+                    cellCardView.setVisibility(View.GONE);
                 }
-                ObjectAnimator animation = ObjectAnimator.ofInt(abcView, "maxLines", abcView.getMaxLines());
+                ObjectAnimator animation = ObjectAnimator.ofInt(cellCardView, "maxLines", cellCardView.getMaxLines());
                 animation.setDuration(200).start();
             }
         });
         context = super.getContext();
-        //System.out.println(R.id.telephony_tv);
-        tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-        String IMEINumber = "";
-        String subscriberID = "";
-        String SIMSerialNumber = "";
-        if (ContextCompat.checkSelfPermission(context, READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
-            IMEINumber = tm.getDeviceId();
-            subscriberID = tm.getSubscriberId();
-            SIMSerialNumber = tm.getSimSerialNumber();
-        }
-            String strphoneType = "";
-        //int phoneType=tm.getPhoneType();
-        int networkType=tm.getNetworkType();
-        switch (networkType)
-        {
-            case (TelephonyManager.NETWORK_TYPE_CDMA):
-                strphoneType="CDMA";
-                break;
-            case (TelephonyManager.NETWORK_TYPE_GSM):
-                strphoneType="GSM";
-                break;
-            case (TelephonyManager.NETWORK_TYPE_LTE):
-                strphoneType="LTE";
-                break;
-            case (TelephonyManager.NETWORK_TYPE_UMTS):
-                strphoneType="UMTS";
-                break;
-            default:
-                strphoneType="NONE";
-                break;
-        }
-
-        String info="";
-        info+="\n IMEI Number:"+IMEINumber;
-        info+="\n SubscriberID:"+subscriberID;
-        info+="\n Sim Serial Number:"+SIMSerialNumber;
-        info+="\n Phone Network Type:"+strphoneType;
-        textView.setText(info);
         thisView = view;
-        createListener();
+        myPhoneStateListener = new MyPhoneStateListener(context,thisView);
+        myPhoneStateListener.start();
         return view;
     }
-    public void createListener(){
-        MyPhoneStateListener myPhoneStateListener = new MyPhoneStateListener(context,thisView);
-        myPhoneStateListener.start();
+    @Override
+    public void onDestroyView(){
+        myPhoneStateListener.off();
+        super.onDestroyView();
+
     }
+
 }

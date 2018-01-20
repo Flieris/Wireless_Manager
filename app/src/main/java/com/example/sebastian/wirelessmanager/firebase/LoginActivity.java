@@ -1,13 +1,13 @@
 /*
- * Copyright (c) Sebastian Lenkiewicz 2017.
+ * Copyright (c) Sebastian Lenkiewicz 2018.
  */
 
 package com.example.sebastian.wirelessmanager.firebase;
 
 import android.content.Intent;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
@@ -20,8 +20,6 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
-
-import org.w3c.dom.Text;
 
 public class LoginActivity extends AppCompatActivity {
     private EditText inputEmail, inputPassword;
@@ -37,10 +35,10 @@ public class LoginActivity extends AppCompatActivity {
         }
         setContentView(R.layout.activity_login);
 
-        inputEmail = (EditText)findViewById(R.id.current_email);
-        inputPassword = (EditText)findViewById(R.id.current_password);
-        buttonLogin = (Button)findViewById(R.id.log_in);
-        buttonReset = (Button)findViewById(R.id.forgot_password);
+        inputEmail = findViewById(R.id.current_email);
+        inputPassword = findViewById(R.id.current_password);
+        buttonLogin = findViewById(R.id.log_in);
+        buttonReset = findViewById(R.id.forgot_password);
 
         firebaseAuth = FirebaseAuth.getInstance();
         buttonLogin.setOnClickListener(new View.OnClickListener() {
@@ -65,9 +63,19 @@ public class LoginActivity extends AppCompatActivity {
                                     Intent intent = new Intent(LoginActivity.this, MainActivity.class);
                                     startActivity(intent);
                                     finish();
+                                } else {
+                                    Toast.makeText(getApplicationContext(), "Login failed",Toast.LENGTH_LONG).show();
                                 }
                             }
                         });
+            }
+        });
+        buttonReset.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(LoginActivity.this, ResetPasswordActivity.class);
+                startActivity(intent);
+                finish();
             }
         });
     }

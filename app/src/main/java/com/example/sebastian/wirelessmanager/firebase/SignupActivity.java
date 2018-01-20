@@ -1,13 +1,13 @@
 /*
- * Copyright (c) Sebastian Lenkiewicz 2017.
+ * Copyright (c) Sebastian Lenkiewicz 2018.
  */
 
 package com.example.sebastian.wirelessmanager.firebase;
 
 import android.content.Intent;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
@@ -20,7 +20,6 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 
 public class SignupActivity extends AppCompatActivity {
     private EditText inputEmail, inputPassword;
@@ -31,9 +30,9 @@ public class SignupActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_signup);
 
-        inputEmail = (EditText)findViewById(R.id.signup_email);
-        inputPassword = (EditText)findViewById(R.id.signup_password);
-        createUser = (Button)findViewById(R.id.create_account);
+        inputEmail = findViewById(R.id.signup_email);
+        inputPassword = findViewById(R.id.signup_password);
+        createUser = findViewById(R.id.create_account);
 
         firebaseAuth = FirebaseAuth.getInstance();
         createUser.setOnClickListener(new View.OnClickListener() {
@@ -42,17 +41,17 @@ public class SignupActivity extends AppCompatActivity {
                 String email = inputEmail.getText().toString();
                 String password = inputPassword.getText().toString();
                 if (TextUtils.isEmpty(email)) {
-                    Toast.makeText(getApplicationContext(), "Enter email address!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), "Enter email address!", Toast.LENGTH_LONG).show();
                     return;
                 }
 
                 if (TextUtils.isEmpty(password)) {
-                    Toast.makeText(getApplicationContext(), "Enter password!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), "Enter password!", Toast.LENGTH_LONG).show();
                     return;
                 }
 
                 if (password.length() < 6) {
-                    Toast.makeText(getApplicationContext(), "Password too short, enter minimum 6 characters!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), "Password too short, enter minimum 6 characters!", Toast.LENGTH_LONG).show();
                     return;
                 }
                 firebaseAuth.createUserWithEmailAndPassword(email,password)
@@ -60,7 +59,7 @@ public class SignupActivity extends AppCompatActivity {
                             @Override
                             public void onComplete(@NonNull Task<AuthResult> task) {
                                 if (!task.isSuccessful()) {
-                                    Toast.makeText(getApplicationContext(), "User creation failed!", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(getApplicationContext(), "User creation failed!", Toast.LENGTH_LONG).show();
                                 } else {
                                     Intent intent = new Intent(SignupActivity.this, MainActivity.class);
                                     startActivity(intent);
@@ -70,6 +69,7 @@ public class SignupActivity extends AppCompatActivity {
                         });
             }
         });
+
     }
     @Override
     public void onBackPressed(){
