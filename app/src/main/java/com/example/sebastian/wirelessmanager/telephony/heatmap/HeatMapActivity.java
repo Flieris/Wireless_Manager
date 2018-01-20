@@ -7,34 +7,26 @@ package com.example.sebastian.wirelessmanager.telephony.heatmap;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
-import android.location.LocationListener;
-import android.provider.MediaStore;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
-import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
-import android.telephony.CellIdentityCdma;
+import android.support.v7.widget.CardView;
 import android.telephony.TelephonyManager;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.CheckBox;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.sebastian.wirelessmanager.MainActivity;
 import com.example.sebastian.wirelessmanager.R;
 import com.example.sebastian.wirelessmanager.telephony.Cell;
-import com.example.sebastian.wirelessmanager.telephony.MyPhoneStateListener;
-import com.example.sebastian.wirelessmanager.telephony.TelephonyFragment;
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApi;
-import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -43,12 +35,13 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polygon;
+import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.TileOverlay;
 import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -57,14 +50,9 @@ import com.google.firebase.database.ValueEventListener;
 import com.google.maps.android.heatmaps.HeatmapTileProvider;
 import com.google.maps.android.heatmaps.WeightedLatLng;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 
@@ -74,7 +62,8 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
         GoogleMap.OnMapLoadedCallback {
     //Ui components:
     private TextView operatorTv;
-    private RadioButton lteRadio, umtsRadio;
+    private RadioButton lteRadio, umtsRadio, heatmapRadio, convexRadio, concaveRadio, clusterRadio, pilotRadio;
+    private CardView mapOptions;
     //Firebase reference and data:
     private FirebaseAuth firebaseAuth;
     private DatabaseReference mDatabase;
@@ -83,11 +72,10 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private Location mLastKnownLocation;
     private static final int DEFAULT_ZOOM = 15;
-    //Cell heat map:
-    private ArrayList<Cell> cellList;
+    //heat map:
     private HeatmapTileProvider mProvider;
     private TileOverlay mOverlay;
-    private ArrayList<WeightedLatLng> weightedLatLngList;
+    int colors[];
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -96,10 +84,26 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
-        cellList = new ArrayList<>();
-        operatorTv = (TextView)findViewById(R.id.map_network_operator);
-        lteRadio = (RadioButton)findViewById(R.id.type_lte);
-        umtsRadio = (RadioButton)findViewById(R.id.type_umts);
+        operatorTv = findViewById(R.id.map_network_operator);
+        lteRadio = findViewById(R.id.type_lte);
+        umtsRadio = findViewById(R.id.type_umts);
+        heatmapRadio = findViewById(R.id.type_heatmap);
+        convexRadio = findViewById(R.id.type_convex);
+        concaveRadio = findViewById(R.id.type_concave);
+        clusterRadio = findViewById(R.id.type_cluster);
+        pilotRadio = findViewById(R.id.type_best_pilot);
+        mapOptions= findViewById(R.id.map_options);
+        mapOptions.setOnClickListener(new View.OnClickListener(){
+            public void onClick(View v) {
+                RelativeLayout optionsLayout = findViewById(R.id.options_layout);
+                if (optionsLayout.getVisibility() == View.GONE) {
+                    optionsLayout.setVisibility(View.VISIBLE);
+                } else {
+                    optionsLayout.setVisibility(View.GONE);
+                }
+            }
+        });
+        colors = getApplicationContext().getResources().getIntArray(R.array.cellRainbow);
         TelephonyManager mTelephony = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
         operatorTv.setText(mTelephony.getNetworkOperatorName());
         setRadioButtons();
@@ -131,10 +135,10 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
             mMap.setMyLocationEnabled(true);
             getDeviceLocation();
         }
-        final LayoutInflater factory = getLayoutInflater();
-        final View telephonyView = factory.inflate(R.layout.fragment_telephony,null);
-        MyPhoneStateListener phoneStateListener = new MyPhoneStateListener(this.getApplicationContext(),telephonyView);
-        phoneStateListener.start();
+        //final LayoutInflater factory = getLayoutInflater();
+        //final View telephonyView = factory.inflate(R.layout.fragment_telephony,null);
+        //MyPhoneStateListener phoneStateListener = new MyPhoneStateListener(this.getApplicationContext(),telephonyView);
+        //phoneStateListener.start();
         mMap.setOnMyLocationButtonClickListener(this);
     }
 
@@ -196,23 +200,17 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
     private void addHeatMap(){
         List<WeightedLatLng> list = null;
         getDataFromFirebase();
-        Log.i("test",cellList.toString());
 
-        //mProvider = new HeatmapTileProvider.Builder()
-         //       .weightedData(list)
-          //      .build();
     }
 
     private void getDataFromFirebase() {
-
-        weightedLatLngList = new ArrayList<>();
         TelephonyManager mTelephony = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
         final int mcc = Integer.parseInt(mTelephony.getNetworkOperator().substring(0, 3));
         final String operator = mTelephony.getNetworkOperatorName();
         firebaseAuth = FirebaseAuth.getInstance();
         FirebaseDatabase database = FirebaseDatabase.getInstance();
         // database.setPersistenceEnabled(true);
-        RadioGroup cellSelection = (RadioGroup)findViewById(R.id.cell_selection);
+        RadioGroup cellSelection = findViewById(R.id.cell_selection);
         int id = cellSelection.getCheckedRadioButtonId();
         String type;
         switch(id){
@@ -227,41 +225,70 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
                 type = "UNKNOWN";
                 break;
         }
-        final String finalType = getNetworkType();
         mDatabase = database.getReference(mcc + "/" + operator + "/" + type);
         ValueEventListener cellListener = new ValueEventListener() {
-            ArrayList<WeightedLatLng> list = new ArrayList<>();
+            ArrayList<WeightedLatLng> heatmapList = new ArrayList<>();
+            ArrayList<PolygonOptions> concaveList = new ArrayList<>();
+            ArrayList<PolygonOptions> convexList = new ArrayList<>();
+            ArrayList<PolygonOptions> clusterList = new ArrayList<>();
+            ArrayList<PolygonOptions> pilotList = new ArrayList<>();
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                for (DataSnapshot cellSnapshot: dataSnapshot.getChildren()){
-                    System.out.println(cellSnapshot.getKey());
-                    if (cellSnapshot.getKey().equals("Border") || cellSnapshot.getKey().equals("border")) {
-                        CheckBox borderCheckbox = (CheckBox)findViewById(R.id.border_cb);
-                        if (borderCheckbox.isChecked()) {
-                            System.out.println("test");
-                        }
-                    } else {
-                        for (DataSnapshot pointSnapshot : cellSnapshot.getChildren()) {
+                for (DataSnapshot cellSnapshot : dataSnapshot.getChildren()) {
+                    int cid = Integer.parseInt(cellSnapshot.getKey()) % colors.length;
+                    int argb = colors[cid];
+                    int red = (argb >> 16) & 0xFF;
+                    int green = (argb >> 8) & 0xFF;
+                    int blue = argb & 0xFF;
+                    int strokeColor = Color.argb(0xFF,  red, green, blue);
+                    int fillColor = Color.argb(0xFF/2,  red, green, blue);
+                    for (DataSnapshot pointSnapshot : cellSnapshot.getChildren()) {
+                        if (pointSnapshot.getKey().equalsIgnoreCase("cluster")) {
+                            for (DataSnapshot borderSnapshot : pointSnapshot.getChildren()) {
+                                PolygonOptions clusterOptions = new PolygonOptions().geodesic(true).strokeColor(strokeColor).fillColor(fillColor);
+                                HashMap<String, Object> map;
+                                for (DataSnapshot clusterSnapshot : borderSnapshot.getChildren()) {
+                                    map = (HashMap<String, Object>) clusterSnapshot.getValue();
+                                    LatLng point = new LatLng((double) map.get("latitude"), (double) map.get("longitude"));
+                                    clusterOptions.add(point);
+                                }
+                                clusterList.add(clusterOptions);
+                            }
+                            continue;
+                        } else if (pointSnapshot.getKey().equalsIgnoreCase("concaveborder")) {
+                            PolygonOptions concaveOptions = new PolygonOptions().geodesic(true).strokeColor(strokeColor).fillColor(fillColor);
+                            HashMap<String, Object> map;
+                            for (DataSnapshot concaveSnapshot : pointSnapshot.getChildren()) {
+                                map = (HashMap<String, Object>) concaveSnapshot.getValue();
+                                LatLng point = new LatLng((double) map.get("latitude"), (double) map.get("longitude"));
+                                concaveOptions.add(point);
+                            }
+                            concaveList.add(concaveOptions);
+                        } else if (pointSnapshot.getKey().equalsIgnoreCase("convexborder")) {
+                            PolygonOptions convexOptions = new PolygonOptions().geodesic(true).strokeColor(strokeColor).fillColor(fillColor);
+                            HashMap<String, Object> map;
+                            for (DataSnapshot convexSnapshot : pointSnapshot.getChildren()) {
+                                map = (HashMap<String, Object>) convexSnapshot.getValue();
+                                LatLng point = new LatLng((double) map.get("latitude"), (double) map.get("longitude"));
+                                convexOptions.add(point);
+                            }
+                            convexList.add(convexOptions);
+                        } else {
                             Cell cell = pointSnapshot.getValue(Cell.class);
                             double lat = cell.latitude;
                             double lng = cell.longitude;
                             double dBm = 200 + cell.signalStrength;
                             LatLng point = new LatLng(lat, lng);
+                            PolygonOptions polygonOptions = new PolygonOptions().geodesic(true).fillColor(fillColor).strokeWidth(0);
+                            ArrayList<LatLng> corners = findCorners(point);
+                            polygonOptions.addAll(corners);
+                            pilotList.add(polygonOptions);
                             WeightedLatLng weightedPoint = new WeightedLatLng(point, dBm);
-                            list.add(weightedPoint);
+                            heatmapList.add(weightedPoint);
                         }
                     }
                 }
-                // find an alternative to heatmap
-                // find a way so points dissipate with zoom
-                mProvider = new HeatmapTileProvider.Builder()
-                        .weightedData(list)
-                        .radius(20)
-                        .opacity(0.5)
-                        .build();
-                mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
-                mOverlay.clearTileCache();
-                RadioGroup cellSelection = (RadioGroup)findViewById(R.id.cell_selection);
+                RadioGroup cellSelection = findViewById(R.id.cell_selection);
                 cellSelection.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
                     @Override
                     public void onCheckedChanged(RadioGroup radioGroup, int i) {
@@ -269,6 +296,72 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
                         getDataFromFirebase();
                     }
                 });
+                RadioGroup mapOptions = findViewById(R.id.border_selection);
+                mapOptions.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(RadioGroup radioGroup, int i) {
+                        switch(i) {
+                            case R.id.type_heatmap:
+                                mMap.clear();
+                                mProvider = new HeatmapTileProvider.Builder()
+                                        .weightedData(heatmapList)
+                                        .radius(20)
+                                        .opacity(0.5)
+                                        .build();
+                                mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
+                                mOverlay.clearTileCache();
+                                break;
+                            case R.id.type_convex:
+                                mMap.clear();
+                                for (PolygonOptions convex: convexList) {
+                                    Polygon polygon = mMap.addPolygon(convex);
+                                }
+                                break;
+                            case R.id.type_concave:
+                                mMap.clear();
+                                for (PolygonOptions concave: concaveList) {
+                                    Polygon polygon = mMap.addPolygon(concave);
+                                }
+                                break;
+                            case R.id.type_cluster:
+                                mMap.clear();
+                                for (PolygonOptions cluster: clusterList) {
+                                    Polygon clusters = mMap.addPolygon(cluster);
+                                }
+                                break;
+                            case R.id.type_best_pilot:
+                                mMap.clear();
+                                for (PolygonOptions pilot: pilotList) {
+                                    Polygon pilots = mMap.addPolygon(pilot);
+                                }
+                                break;
+                        }
+                    }
+                });
+
+            }
+
+            private ArrayList<LatLng> findCorners(LatLng point) {
+                double R = 6371e3;
+                double d = 10.0 * Math.sqrt(2);
+                double cphi1 = Math.asin(Math.sin(point.latitude * (Math.PI / 180)) * Math.cos(d / R) + Math.cos(point.latitude * (Math.PI / 180)) * Math.sin(d / R) * Math.cos(Math.PI / 4));
+                double cλ1 = (point.longitude * (Math.PI / 180)) + Math.atan2(Math.sin(Math.PI / 4) * Math.sin(d / R) * Math.cos(point.latitude * (Math.PI / 180)), Math.cos(d / R) - Math.sin(point.latitude * (Math.PI / 180)) * Math.sin(cphi1));
+                double cphi2 = Math.asin(Math.sin(point.latitude * (Math.PI / 180)) * Math.cos(d / R) + Math.cos(point.latitude * (Math.PI / 180)) * Math.sin(d / R) * Math.cos(3 * Math.PI / 4));
+                double cλ2 = (point.longitude * (Math.PI / 180)) + Math.atan2(Math.sin(3 * Math.PI / 4) * Math.sin(d / R) * Math.cos(point.latitude * (Math.PI / 180)), Math.cos(d / R) - Math.sin(point.latitude * (Math.PI / 180)) * Math.sin(cphi2));
+                double cphi3 = Math.asin(Math.sin(point.latitude * (Math.PI / 180)) * Math.cos(d / R) + Math.cos(point.latitude * (Math.PI / 180)) * Math.sin(d / R) * Math.cos(-3 * Math.PI / 4));
+                double cλ3 = (point.longitude * (Math.PI / 180)) + Math.atan2(Math.sin(-3 * Math.PI / 4) * Math.sin(d / R) * Math.cos(point.latitude * (Math.PI / 180)), Math.cos(d / R) - Math.sin(point.latitude * (Math.PI / 180)) * Math.sin(cphi3));
+                double cphi4 = Math.asin(Math.sin(point.latitude * (Math.PI / 180)) * Math.cos(d / R) + Math.cos(point.latitude * (Math.PI / 180)) * Math.sin(d / R) * Math.cos(-Math.PI / 4));
+                double cλ4 = (point.longitude * (Math.PI / 180)) + Math.atan2(Math.sin(-Math.PI / 4) * Math.sin(d / R) * Math.cos(point.latitude * (Math.PI / 180)), Math.cos(d / R) - Math.sin(point.latitude * (Math.PI / 180)) * Math.sin(cphi4));
+                LatLng corner1 = new LatLng(cphi1* (180 / Math.PI), cλ1* (180 / Math.PI));
+                LatLng corner2 = new LatLng(cphi2* (180 / Math.PI), cλ2* (180 / Math.PI));
+                LatLng corner3 = new LatLng(cphi3* (180 / Math.PI), cλ3* (180 / Math.PI));
+                LatLng corner4 = new LatLng(cphi4* (180 / Math.PI), cλ4* (180 / Math.PI));
+                ArrayList<LatLng> list = new ArrayList<>();
+                list.add(corner1);
+                list.add(corner2);
+                list.add(corner3);
+                list.add(corner4);
+                return list;
             }
             @Override
             public void onCancelled(DatabaseError databaseError) {
@@ -296,6 +389,11 @@ public class HeatMapActivity extends FragmentActivity implements OnMapReadyCallb
                 umtsRadio.setChecked(false);
             }
         }
+        heatmapRadio.setChecked(true);
+        convexRadio.setChecked(false);
+        concaveRadio.setChecked(false);
+        clusterRadio.setChecked(false);
+        pilotRadio.setChecked(false);
     }
     private String getNetworkType(){
         TelephonyManager mTelephony = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
